@@ -388,6 +388,17 @@ vtxformat v/co
 pl 2/6 3/8 4/9
 ```
 
+## A Note on Winding Order
+
+While winding order is not and cannot be enforced by this format, it is beneficial to explain the reason for recommending clockwise (CW) winding order when 3D triangular meshes are usually constructed with counter-clockwise (CCW) ordering.
+
+In 3D, the right-hand rule dictates that a CCW ordering of vertices will produce a normal in the desired direction.
+
+In 4D, there is no equivalent right-hand rule. However, when one vertex of a tetrahedron is selected as the origin of some basis, the other three vertices can be ordered CW or CCW relative to the origin point. Calculating the 4D normal vector of a tetrahedron is accomplished by taking the determinant of a matrix formed by the three edges that touch the origin vertex. Assuming the rows of the matrix are from edges 0, 1, and 2 in order, a CW ordering, *not* CCW, is needed to produce a normal vector pointing "out" from the tetrahedron.
+If this flipped convention is confusing, you may want to adopt the convention proposed by [Chu et al.], i.e. the ordering is CCW when viewed from *inside the tetrahedron.*
+
+[Chu et al.] Chu, A., Fu, C. W., Hanson, A., & Heng, P. A. (2009). GL4D: A GPU-based architecture for interactive 4D visualization. IEEE transactions on visualization and computer graphics, 15(6), 1587-1594.
+
 # Material Library
 
 4DO uses a Physically-Based Rendering (PBR) material model, specifically the "Metallic-Roughness Model." It is identical to the PBR material model used by the glTF 2.0 file format (see [https://github.com/KhronosGroup/glTF?tab=readme-ov-file](https://github.com/KhronosGroup/glTF?tab=readme-ov-file)). (also see [https://blog.turbosquid.com/2023/07/27/an-intro-to-physically-based-rendering-material-workflows-and-metallic-roughness/](https://blog.turbosquid.com/2023/07/27/an-intro-to-physically-based-rendering-material-workflows-and-metallic-roughness/))
@@ -513,17 +524,6 @@ t 4 5 6 7
 usemtl mat1
 t 5 6 7 8
 ```
-
-## A Note on Winding Order
-
-While winding order is not and cannot be enforced by this format, it is beneficial to explain the reason for recommending clockwise (CW) winding order when 3D triangular meshes are usually constructed with counter-clockwise (CCW) ordering.
-
-In 3D, the right-hand rule dictates that a CCW ordering of vertices will produce a normal in the desired direction.
-
-In 4D, there is no equivalent right-hand rule. However, when one vertex of a tetrahedron is selected as the origin of some basis, the other three vertices can be ordered CW or CCW relative to the origin point. Calculating the 4D normal vector of a tetrahedron is accomplished by taking the determinant of a matrix formed by the three edges that touch the origin vertex. Assuming the rows of the matrix are from edges 0, 1, and 2 in order, a CW ordering, *not* CCW, is needed to produce a normal vector pointing "out" from the tetrahedron.
-If this flipped convention is confusing, you may want to adopt the convention proposed by [Chu et al.], i.e. the ordering is CCW when viewed from *inside the tetrahedron.*
-
-[Chu et al.] Chu, A., Fu, C. W., Hanson, A., & Heng, P. A. (2009). GL4D: A GPU-based architecture for interactive 4D visualization. IEEE transactions on visualization and computer graphics, 15(6), 1587-1594.
 
 # Glossary of Commands
 ## 4DO Commands
