@@ -2,7 +2,7 @@
 The official specification for the 4DO Geometry File Format
 
 # 4D OBJ File Format Specification - Version 2
-August 2, 2024
+April 8, 2026
 
 ## Background
 In recent years, four-dimensional software and video games have seen a steady rise in popularity and interest. Games like Miegakure, 4D Miner, 4D Golf, and 4D Toys all have growing fan bases and some have seen viral success with their devlogs and status updates. Other software such as Stella4D, Polychora, and HoxelDraw are geared toward 4D content creation and visualization. So far, there seems to be little or no collaboration or coordination between any 4D software. As of April 2024, there is no consensus on a standard file format for 4D geometric objects. Some software (at least Stella4D and Polychora) have used a modified version of the .OFF file format, originally designed for 3D polytopes. However, the extensions to 4D seem out-of-place within the file format. Additionally, the geometric structure of the .OFF format (arbitrary cells composed of arbitrary polygons) requires too much post-processing to transform the data into a tetrahedral mesh. Other software uses either a proprietary format, or opts to generate geometric models on-the-fly.
@@ -17,7 +17,7 @@ I propose a new 4D geometry file format that is designed specifically for 4D com
 - Describe only geometry, not a full scene
 - Minimize data duplication
 
-This format might not be the most efficient, nor the most flexible. It does not cover all possible use-cases of 4D geometric computation. This format is intended to be simple to read and write, both by humans and computers. Its features are unapologetically skewed toward those needed for 4D Animation and 4D Game applications.
+This format might not be the most efficient, nor the most flexible. It does not cover all possible use-cases of 4D geometric computation. This format is intended to be simple to read and write, both by humans and computers. Its features are unapologetically biased toward those needed for 4D Animation and 4D Game applications.
 
 ### Core Features
 - Vertices
@@ -26,21 +26,27 @@ This format might not be the most efficient, nor the most flexible. It does not 
   - Texture coordinate
   - Color
 - Polylines
-- Tetrahedral cells
-- Cuboid cells
-- Compound cells (contiguous groups of primitive cells)
+- Polygonal Faces
+- Tetrahedral, Cuboid, and Polyhedral cells
 - Model Orientation
+- PBR Materials
 
 ### Format Design Inspiration: Wavefront OBJ
 The 4DO format is mostly patterned after the ubiquitous Wavefront OBJ file format for 3D geometry. The OBJ format is popular for its human readability, simplicity, and its ability to reuse vertex data for multiple faces. The 4DO format will feel very similar to the OBJ format with a few key differences:
 
 1. It's 4D instead of 3D (obviously)
-2. It supports a small, hard-coded list of primitive cells whereas OBJ supports n-sided convex and concave polygons
-3. The indices are Zero-based, as opposed to OBJ which is One-based
-4. Relative indices are NOT supported in 4DO (no negative indices)
-5. 4DO provides a mechanism for defining the coordinate frame of the model
-6. It supports vertex colors in addition to texture coordinates
-7. 4DO doesn't support multiple objects
+1. The indices are Zero-based, as opposed to OBJ which is One-based
+1. Relative indices are NOT supported in 4DO (no indexing from the end of a list)
+1. 4DO provides a mechanism for defining the coordinate frame of the model
+1. It supports vertex colors in addition to texture coordinates
+1. 4DO doesn't support multiple objects
+
+## Changes in Specification Version 2
+ - The Cuboid, Face, and Polyhedron primitives were added
+ - The Cell Group feature was removed (in favor of polyhedral cells)
+ - The `cellformat` and `plformat` commands were replaced by the `vtxformat` command
+ - Cell-level data is no longer supported
+ - The color command was renamed from `co` to `vc`
 
 ## About this document
 **OPTIONAL**, **REQUIRED**, **MAY**, **MAY NOT**, **SHOULD**, **SHOULD NOT**, **MUST**, **MUST NOT**
@@ -58,7 +64,7 @@ The 4DO format is mostly patterned after the ubiquitous Wavefront OBJ file forma
 ## File Structure
 
 ### File Header
-A 4DO file **MUST** begin with "4DO" followed by a space and then the file specification version, which is currently "2", like this: `4DO 2`. The `4DO` command **MUST** be provided before any other commands.
+A 4DO file **MUST** begin with "4DO" followed by a space and then the file specification version, which is currently "2", like this: `4DO 2`. The `4DO` command **MUST** be provided as the first line of the file.
 
 If an Orientation is provided, it **SHOULD** be provided in the header lines and it **MUST** be provided before any Vertex data is listed.
 
@@ -75,23 +81,23 @@ Blank lines are ignored.
 ### Floating Point Numbers
 Floating point numbers can have arbitrary precision. Use the period instead of the comma to denote fractional values. Floating point numbers **MUST** be real numbers. Negative numbers **MUST** use the `-` sign. Positive numbers **MAY** use the `+` sign but any number without a sign is assumed to be positive.
 
-Floating point numbers **MAY** be written as integers, without a decimal point (e.g. `1`)
+Floating point numbers **MAY** be written as integers, without a decimal point (e.g. `1`).
 
-Floating point numbers **MAY** be expressed in scientific notation.
+Floating point numbers **MAY** be expressed in scientific notation (e.g. `5e-1`).
 
 `+/-Infinity` and `NaN` are not valid floating point numbers.
 
 ### Indices
 Indices are zero-based (as opposed to Wavefront OBJ where indices are 1-based)
 
-Indices **MUST** be non-negative real integers and **MUST NOT** refer to out-of-bounds data positions (i.e. if there are 10 vertices defined, a Tetrahedron **MUST NOT** attempt to refer to a vertex at index 10 (which would be the 11th vertex))
+Indices **MUST** be real integers and **MUST NOT** refer to out-of-bounds data positions (i.e. if there are 10 vertices defined, a Tetrahedron **MUST NOT** attempt to refer to a vertex at index 10 (which would be the 11th vertex)). All indices **MUST** be non-negative, with the exception of face indices provided by a Polyhedron (see [Negated Face Indices](#negated-face-indices))
 
 ### General
-4DO parsers **SHOULD** support Unicode characters and **SHOULD** expect .4DO files to be encoded using UTF-8.
+4DO parsers **SHOULD** support Unicode characters and **SHOULD** expect 4DO files to be encoded using UTF-8.
 
 ## Invalid 4DO Files
 
-If a file is deemed **INVALID**, it **MAY** be rejected outright. However, a parser **MAY** attempt to fix the contents of the file, but it's under no obligation to do so. Optionally, it may disregard the broken/inconsistent data and attempt to properly load the rest of the data. If this is done, a parser **SHOULD** inform the user of the problem and of which data wasn't loaded.
+If a file is deemed **INVALID**, it **MAY** be rejected outright. However, a parser **MAY** attempt to fix the contents of the file, but it's under no obligation to do so. Alternatively, it may disregard the broken/inconsistent data and attempt to properly load the rest of the data. If this is done, a parser **SHOULD** inform the user of the problem and of which data wasn't loaded.
 
 ## Geometric Structure
 There are several ways to define 4D geometric entities. Vertices and vertex data are the foundation of this file format. All other structures build upon collections of vertex data (or collections of collections of vertex data).
@@ -101,13 +107,19 @@ Tetrahedra are one of the main primitive cells of 4DO. A tetrahedral mesh will l
 ![Tetrahedra made from vertices](4DO_spec_diagrams/verts_to_tets.png)
 
 ### Vertex => Cuboid
-Cuboids are another useful primitive cell for 4D meshes. They can easily be decomposed into tetrahedra for applications that require it.
+Cuboids are another useful primitive cell for 4D meshes. They are compact and can easily be decomposed into tetrahedra for applications that require it.
 
-TODO: vertex -> cuboid diagram
+![Cuboids made from vertices](4DO_spec_diagrams/verts_to_cuboids.png)
 
-### Vertex => Primitive Cell => Cell Group
-For more advanced rendering or modeling systems, an application may require the use of higher-order cells, rather than just tetrahedra. While 4DO doesn't directly support arbitrary cell configurations, it can effectively support them by the use of the Cell structure, which is a grouping of tetrahedra into a higher-order polyhedron.
-![Cells composed of tetrahedra](4DO_spec_diagrams/verts_to_tets_to_cells.png)
+### Vertex => Face
+Polygonal Faces can be defined and used as standalone primitives or can be used to define a Polyhedron. Faces can be convex or concave.
+
+![Faces made from vertices](4DO_spec_diagrams/verts_to_faces.png)
+
+### Vertex => Face => Polyhedron
+The Polyhedron is composed of a set of polyhedral Faces. Polyhedral cells allow the greatest flexibility in describing shapes, but are often non-trivial to decompose into tetrahedra (and in some cases, impossible. See [Schönhardt Polyhedron](https://en.wikipedia.org/wiki/Sch%C3%B6nhardt_polyhedron)).
+
+![Polyhedron made from faces made from vertices](4DO_spec_diagrams/verts_to_faces_to_polyh.png)
 
 ### Vertex => Polyline
 Some 4D applications developers may want to render some edges of the geometry, but not all of them. Polylines should be used for this.
@@ -194,57 +206,55 @@ vt 0.25 0.75 0.1
 vt -0.2 1.6 0.9
 ```
 
-## Color Data
+## Vertex Color
 
-Color Data is **OPTIONAL**.
+Vertex Color data is **OPTIONAL**.
 
-Color Data can be assigned to Vertices, Tetrahedra, Polylines, and Cells in the same way that custom Data can be assigned to them.
+A Color is denoted using the `vc` keyword, followed by 3 or 4 unsigned integer numbers. These numbers **MUST** be in the [0,255] range. The 4 values represent the red, green, blue, and alpha components of the color. If only 3 values are provided, they are assumed to be the RGB components of the color and the Alpha component **SHOULD** be assumed to be `255`.
 
-A Color is denoted using the `co` keyword, followed by 3 or 4 unsigned integer numbers. These numbers **MUST** be in the [0,255] range. The 4 values represent the red, green, blue, and alpha components of the color. If only 3 values are provided, they are assumed to be the RGB components of the color and the Alpha component **SHOULD** be assumed to be `255`.
-
-Colors can also be defined as 3-byte (RGB) or 4-byte (RGBA) hexadecimal numbers, like this: `co 0xRRGGBBAA`.
+Colors can also be defined as 3-byte (RGB) or 4-byte (RGBA) hexadecimal numbers, like this: `vc 0xRRGGBBAA`.
 
 #### Examples
 ```
 # RGB color
-co 114 255 66
-co 0x72FF42   # the same color in hex
+vc 114 255 66
+vc 0x72FF42   # the same color in hex
 
 # RGBA color
-co 126 127 128 255
-co 0x7e7F80FF   # the same color in hex
+vc 126 127 128 255
+vc 0x7e7F80FF   # the same color in hex
 ```
 
 ## Tetrahedron
 
 Tetrahedra are **OPTIONAL**. The Tetrahedron is one of the primitive cells supported by 4DO.
 
-A tetrahedron is denoted using the `t` keyword. A Tetrahedron command is an ordered list of vertex data for each of the four vertices of the tetrahedron. By default, tetrahedra are defined as a list of four Vertex Position indices, separated by spaces. Other data, such as Vertex Texture Coordinate, Vertex Normal, and Vertex Color, may be associated with a tetrahedron's vertices by customizing the [Cell Format](#primitive-cell-format-customization).
+A tetrahedron is denoted using the `t` keyword. A Tetrahedron command is an ordered list of vertex data with one argument for each of the four vertices of the tetrahedron. By default, tetrahedra are defined as a list of four Vertex Position indices, separated by spaces. Other data, such as Vertex Texture Coordinate, Vertex Normal, and Vertex Color, may be associated with a tetrahedron's vertices by customizing the [Vertex Format](#vertex-format-customization).
 
 #### Examples
 ```
 # Tetrahedron with only Vertex Position
-# Note that a cellformat command is not required for this simple case
+# Note that a vtxformat command is not required for this simple case
 t 0 1 2 3
 ```
 ```
 # Tetrahedron with Vertex Position (indices 0,1,2,3) and Vertex Normal (indices 4,5,6,7)
-cellformat v/vn
+vtxformat v/vn
 t 0/4 1/5 2/6 3/7
 ```
 ```
 # Tetrahedron with Vertex Position (indices 0,1,2,3), Normal (indices 4,5,6,7), and Texture Coordinates (indices 8,9,10,11)
-cellformat v/vn/vt
+vtxformat v/vn/vt
 t 0/4/8 1/5/9 2/6/10 3/7/11
 ```
 ```
 # Tetrahedron with Vertex Position (indices 0,1,2,3), Texture Coordinates (indices 4,5,6,7), and Color (indices 8,9,10,11)
-cellformat v/vt/co
+vtxformat v/vt/co
 t 0/4/8 1/5/9 2/6/10 3/7/11
 ```
 ```
 # Two tetrahedra in the same file with their vertex position data listed just before the tetrahedron commands
-# (the cellformat command is not necessary in this case since only vertex position data is provided)
+# (the vtxformat command is not necessary in this case since only vertex position data is provided)
 v 0.0 0.0 0.0 0.0
 v 1.0 0.0 0.0 0.0
 v 0.0 1.0 0.0 0.0
@@ -256,21 +266,9 @@ v 2.0 4.0 2.0 2.0
 v 2.0 2.0 4.0 2.0
 t 4 5 6 7
 ```
-```
-# A tetrahedron with a single color (at index 9), rather than a color for each vertex
-cellformat co v
-t 9 0 1 2 3
-```
-```
-# It's possible to define a tetrahedron format with multiple per-tetrahedron data points
-cellformat co vt v/vn
-
-# a tetrahedron with one color and one texture coordinate assigned (indices 5 and 7, respectively) as well as vertex position (indices 0,1,2,3) and vertex normal (indices 8,9,10,11)
-t 5 7 0/8 1/9 2/10 3/11
-```
 
 ### Tetrahedron Vertex Winding Order
-The winding order of the vertices in a Tetrahedron helps to determine the direction of the surcell normal. While this order is not enforced by this specification, the following convention is recommended. With vertex 0 at the apex of the tetrahedron, the three vertices of the base of the tetrahedron should be listed in CCW order, when facing the front of the base. The vertex order is illustrated here:
+The winding order of the vertices in a Tetrahedron helps to determine the direction of the surcell normal. While the order is not enforced by this specification, the following convention is recommended. With vertex 0 at the apex of the tetrahedron, the three vertices of the base of the tetrahedron should be listed in clockwise (CW) order, when viewed from the outside of the tetrahedron. The vertex order is illustrated here:
 ![Tetrahedron vertex winding order](4DO_spec_diagrams/tet_winding_order.png)
 
 ## Cuboid
@@ -278,17 +276,17 @@ Like the Tetrahedron, the Cuboid is another primitive cell type supported by 4DO
 
 A Cuboid is any six-sided polyhedron where each face is quadrilateral and each of the eight vertices is shared by exactly three faces (e.g. cube, rectangular prism, parallelpiped, frustum, etc.).
 
-A cuboid is denoted using the `c` keyword. A Cuboid command is an ordered list of vertex data for each of the eight vertices of the cuboid. By default, cuboids are defined as a list of eight Vertex Position indices, separated by spaces. Other data, such as Vertex Texture Coordinate, Vertex Normal, and Vertex Color, may be associated with a cuboid's vertices by customizing the [Cell Format](#primitive-cell-format-customization).
+A cuboid is denoted using the `c` keyword. A Cuboid command is an ordered list of vertex data with one argument for each of the eight vertices of the cuboid. By default, cuboids are defined as a list of eight Vertex Position indices, separated by spaces. Other data, such as Vertex Texture Coordinate, Vertex Normal, and Vertex Color, may be associated with a cuboid's vertices by customizing the [Vertex Format](#vertex-format-customization).
 
 #### Examples
 ```
 # Cuboid with only Vertex Position
-# Note that a cellformat command is not required for this simple case
+# Note that a vtxformat command is not required for this simple case
 c 0 1 2 3 4 5 6 7
 ```
 ```
 # Cuboid with Vertex Position (indices 0,1,2,3,4,5,6,7) and Vertex Normal (indices 8,9,10,11,12,13,14,15)
-cellformat v/vn
+vtxformat v/vn
 c 0/8 1/9 2/10 3/11 4/12 5/13 6/14 7/15
 ```
 ```
@@ -298,56 +296,86 @@ c 0/8 1/9 2/10 3/11 4/12 5/13 6/14 7/15
 ### Cuboid Vertex Order
 The order in which the vertices of the cuboid are provided is important, more so than for the Tetrahedron. There are many possibilities for vertex ordering, so a convention must be required to ensure consistent results from one application to the next.
 
-Cuboid vertices MUST be provided in Z-Order (AKA Morton Order, Z-Curve-Order, or Binary Order (see [https://en.wikipedia.org/wiki/Z-order_curve](https://en.wikipedia.org/wiki/Z-order_curve))). Note that the ordering is relative to the cuboid's own reference frame; the world-space directions of the cuboid's edges are not important. The following diagram illustrates the vertex ordering convention:
+Cuboid vertices **MUST** be provided in Z-Order (AKA Morton Order, Z-Curve-Order, or Binary Order (see [https://en.wikipedia.org/wiki/Z-order_curve](https://en.wikipedia.org/wiki/Z-order_curve))). Note that the ordering is relative to the cuboid's own reference frame; the world-space directions of the cuboid's edges are not important. The following diagram illustrates the vertex ordering convention:
 ![Cuboid vertex ordering convention](4DO_spec_diagrams/cuboid_vertex_order.png)
+
+## Face
+Faces are **OPTIONAL**. A Face is an ordered list of vertices. Edges connect each adjacent vertex. The first and last vertices are also connected by an edge. Faces can be convex or concave. Face vertex positions **SHOULD** be provided in clockwise (CW) order. Faces can be used as standalone primitives (i.e. when defining the "sheet frame" of a polychoron), but are generally used to define the facets of a Polyhedron (see below).
+
+#### Examples
+```
+# a pentagonal face with only vertex position
+# Note that a vtxformat command is not required for this simple case
+
+f 0 1 2 3 4    # a pentagon referencing vertex positions 0, 1, 2, 3, and 4
+```
+```
+# a quadrilateral face with Vertex Position (indices 0,1,2,3), and Vertex Normal (indices 4,5,6,7), and Texture Coordinate (indices 8,9,10,11)
+vtxformat v/vn/vt
+f 0/4/8 1/5/9 2/6/10 3/7/11
+```
+
+![Face vertex ordering convention](4DO_spec_diagrams/face_winding_order.png)
+
+## Polyhedron
+The Polyhedron is the third primitive cell type. Polyhedra are **OPTIONAL**. Unlike the Tetrahedron and the Cuboid, a Polyhedron is defined by a list of faces rather than a list of vertex data. Like polygonal faces, Polyhedra may be convex or concave. Unlike tetrahedra, cuboids, and faces, there is no mechanism in this specification to ensure that a polyhedron is closed, manifold, orientable, and watertight. Care must be taken by consumers of polyhedral data to detect and properly handle such cases.
+
+The faces of a polyhedron **SHOULD** have a consistent winding order within a single polyhedron. In other words, when viewed from the outside, all faces **SHOULD** have vertex positions listed in clockwise (CW) order. For a manifold, watertight 4D mesh, all faces will be shared by exactly two polyhedra.
+
+### Negated Face Indices
+While not strictly required, a single Face **MAY** be referenced by two distinct Polyhedra. This sharing helps reduce data duplication. However, when a face is shared, it will have the wrong winding order for one of the two polyhedra. To account for this, use a negated face index to indicate that the vertex order for a specific face should be reversed.
+
+#### Examples
+```
+# a pair of pyramids that share a quadrilateral base
+<vertex data>
+f 3 2 1 0    # shared quadrilateral base
+f 0 1 4
+f 1 2 4
+f 2 3 4
+f 3 0 4
+f 1 0 5
+f 2 1 5
+f 3 2 5
+f 0 3 5
+p 1 2 3 4 0
+p 5 6 7 8 -0    # face 0 is reversed for this polyhedron
+```
+
+![Two polyhedra sharing a face](4DO_spec_diagrams/polyhedron_diagram.png)
 
 ### General Primitive Cell Requirements
 
-Every cell **MUST** include Vertex Position data.
+These requirements apply to all primitive cells: Faces, Tetrahedra, Cuboids, and Polyhedra.
+
+Every cell **MUST** include [Vertex Position](#vertex-position) data.
 
 The indices provided by each cell entry **MUST** be non-negative integers. They also **MUST** correspond to vertex entries that have previously been listed in the file.
 
-Vertex commands and Cell (Tetrahedron or Cuboid) commands **MAY** be mixed. You do not need to list all vertex data strictly before any cell commands. For example, you may list the vertex positions for a cell, then list the cell itself, then list more vertex positions for the next cell.
+Vertex commands and Cell (Face, Tetrahedron, Cuboid, and Polyhedron) commands **MAY** be mixed. You do not need to list all vertex data strictly before any cell commands. For example, you may list the vertex positions for a cell, then list the cell itself, then list more vertex positions for the next cell.
 
-You **MAY** define a custom Cell Format that includes both vertex color data and texture coordinates, but it's up to the application to decide what to do if both are present.
+You **MAY** define a custom Vertex Format that includes both vertex color data and texture coordinates, but it's up to the application to decide what to do if both are present.
 
-Each vertex in a single cell **MUST** have the same format. (E.g. you couldn't do `t 1 2/4 5/6/8 6//6` because each of these four vertices uses a different format. Likewise, you couldn't do `c 1 2 3 4 5 6 7 8/9/10` because the format of the eighth vertex doesn't match that of the first seven)
+Each vertex in the entire file **MUST** have the same format. For example, this tetrahedron command would be invalid: `t 1 2/4 5/6/8 6//6` because each of these four vertices uses a different format. Likewise, this cuboid command would be invalid: `c 1 2 3 4 5 6 7 8/9/10` because the format of the eighth vertex doesn't match that of the first seven.
 
-## Primitive Cell Format Customization
-Before listing any Tetrahedron or Cuboid commands, you must specify the line format (with one exception). The line format command tells the parser what data types are listed for each vertex in the cell and in what order.
+## Vertex Format Customization
+The vertex format command tells the parser what data types are listed for each vertex in a cell and in what order. The command keyword is `vtxformat`, followed by a forward slash-separated list of vertex data keywords that will be included for each vertex. For example, to attach Vertex Texture Coordinate data to the each vertex of the cell, first call the following command: `vtxformat v/vt`. Then, a tetrahedron may be listed like this: `t v0/vt0 v1/vt1 v2/vt2 v3/vt3` and a cuboid may be listed like this: `c v0/vt0 v1/vt1 ... v7/vt7`. Each vertex is a list of the vertex data indices in the order defined by the first `vtxformat` command, separated by `/`. The default Vertex Format is one that includes only Vertex Position data. You may list the command `vtxformat v`, which has the same effect.
 
-The command keyword is `cellformat`, followed by a forward slash-separated list of vertex data keywords that will be included for each vertex. For example, to attach Vertex Texture Coordinate data to the each vertex of the cell, first call the following command: `cellformat v/vt`. Then, a tetrahedron may be listed like this: `t v0/vt0 v1/vt1 v2/vt2 v3/vt3` and a cuboid may be listed like this: `c v0/vt0 v1/vt1 ... v7/vt7`. Each vertex is a list of the vertex data indices in the order defined by the most first `cellformat` command, separated by `/`.
-The default Primitive Cell Format is one that includes only Vertex Position data. You may list the command `cellformat v`, which has the same effect.
-
-A Cell format **MUST** be defined before any primitive cells are listed (except when using only Vertex Position). Once a format has been defined, it **MUST NOT** be changed during the remainder of the file (i.e. only one cell format per 4DO file).
+The vertex format **MUST** be defined before any primitive cells (i.e. Tetrahedron, Cuboid, Face, Polyhedron, Polyline) are listed. Once a format has been defined, it **MUST NOT** be changed during the remainder of the file (i.e. only one vertex format per 4DO file).
 
 ```
-# Examples of cellformat are scattered throughout this document 
+# Examples of vtxformat are scattered throughout this document 
 ```
-
-### Cell-level Data
-
-You may also attach data to an entire primitive cell, as opposed to attaching to the individual vertices. For example, you may want to assign a color to the whole tetrahedron or cuboid, instead of assigning different colors to each vertex. To do this, call the `cellformat` command and list the keyword for the cell-level data first, followed by a space. For example, to attach color data to a cell (as well as vertex position and normal data), call `cellformat co v/vn`. Then, to list a tetrahedron, call `t co0 v0/vn0 v1/vn1 v2/vn2 v3/vn3`. Likewise, to list a cuboid, call `c co0 v0/vn0 v1/vn1 ... v7/vn7`.
 
 ## Polylines
 
 Polylines are **OPTIONAL**.
 
-Polylines are lists of vertex indices. A polyline is denoted using the `pl` keyword, followed by an ordered list of 2 or more Vertex Position indices, separated by spaces.
+A Polyline is a list of vertex indices. A polyline is denoted using the `pl` keyword, followed by an ordered list of 2 or more Vertex Position indices, separated by spaces. Polyline data **MUST** adhere to the listed vertex format.
 
-Additional data **MAY** be added to the vertices in the Polyline using Polyline Format Customization.
+Polylines can visit vertices and travel along edges that are not part of any cell or face.
 
-There is no limit to the length of a polyline, except those naturally imposed by file size limits, maximum values of counter variables, max memory available, etc.
-
-Polylines can visit vertices and travel along edges that are not part of any tetrahedron.
-
-### Polyline Format Customization
-
-The format of the Polyline command **MAY** be customized using the `plformat` command. This command uses the same rules as the `cellformat` command (see above).
-
-### Polyline-level Data
-
-Vertex Data **MAY** be assigned to an entire Polyline, not just the individual vertices in the polyline. Before listing a Polyline with polyline-level data, the Polyline command format must be defined. Define polyline-level data in the plformat command like this: `plformat co v`. Like with Tetrahedron Format Customization, first list the polyline level data keyword, followed by a space, then provide a slash-separated list of vertex data keywords.
+There is no artificial limit to the length of a polyline.
 
 #### Examples
 ```
@@ -356,37 +384,8 @@ pl 0 1 2 3 4 5 6 7
 ```
 ```
 # A polyline with vertex position (indices 2,3,4) and vertex color (indices 6,8,9)
-plformat v/co
+vtxformat v/co
 pl 2/6 3/8 4/9
-```
-```
-# A polyline with polyline-level color data (index 10), vertex position (indices 1,2,3,4), and vertex texture coordinate (indices 2,4,6,8)
-plformat co v/vt
-pl 10 1/2 2/4 3/6 4/8
-```
-
-## Cell Groups
-
-A Cell Group is a grouping of cell primitives into a compound polyhedron. The cells in a cell group **SHOULD** be contiguous (i.e. every cell in a Cell Group **SHOULD** share at least one face with at least one other cell in the group). Cell Groups may include any defined primitive cell type.
-
-Cell Groups are **OPTIONAL**.
-
-A Cell Group is denoted by the `gc` keyword, followed by a list of 1 or more primitive cell indices, separated by spaces. The indices refer to global indices (i.e. there are not separate index ranges for each different primitive cell type).
-
-The primitive cell indices **SHOULD NOT** be repeated within a single cell group.
-
-Like Polylines, there is no artificial limit to the number of cells that can be assigned to a cell group.
-
-No additional data may be assigned to a Cell Group (i.e. there is no `gcformat` command).
-
-#### Example
-```
-# A cell group comprised of cells at indices 0, 2, and 3
-gc 0 2 3
-```
-```
-# Cells 0 and 1 are not contiguous (trust me). This is not invalid but also not advisable
-gc 0 1
 ```
 
 # Material Library
@@ -515,25 +514,32 @@ usemtl mat1
 t 5 6 7 8
 ```
 
+## A Note on Winding Order
+
+While winding order is not and cannot be enforced by this format, it is beneficial to explain the reason for recommending clockwise (CW) winding order when 3D triangular meshes are usually constructed with counter-clockwise (CCW) ordering.
+
+In 3D, the right-hand rule dictates that a CCW ordering of vertices will produce a normal in the desired direction.
+
+In 4D, there is no equivalent right-hand rule. However, when one vertex of a tetrahedron is selected as the origin of some basis, the other three vertices can be ordered CW or CCW relative to the origin point. Calculating the 4D normal vector of a tetrahedron is accomplished by taking the determinant of a matrix formed by the three edges that touch the origin vertex. Assuming the rows of the matrix are from edges 0, 1, and 2 in order, a CW ordering, *not* CCW, is needed to produce a normal vector pointing "out" from the tetrahedron.
+If this flipped convention is confusing, you may want to adopt the convention proposed by [Chu et al.], i.e. the ordering is CCW when viewed from *inside the tetrahedron.*
+
+[Chu et al.] Chu, A., Fu, C. W., Hanson, A., & Heng, P. A. (2009). GL4D: A GPU-based architecture for interactive 4D visualization. IEEE transactions on visualization and computer graphics, 15(6), 1587-1594.
+
 # Glossary of Commands
 ## 4DO Commands
 `4DO` : [File signature](#file-header) which specifies which specification version to use for parsing.
 
 `c` : [Cuboid](#cuboid). Defines a list of vertex data to assign to each of the eight vertices.
 
-`cellformat` : [Cell Format](#primitive-cell-format-customization). Allows you to customize per-vertex and per-cell data.
-
-`co` : [Color](#color-data). Either RGB or RGBA 8-bit uint per component.
-
-`gc` : [Cell Group](#cell-group). Combine multiple primitive cells into a compound cell.
+`f` : [Face](#face). Defines a list of vertex data to assign to the vertices of a face.
 
 `mtllib` : [Load Material Library](#using-materials). Points to an external .pbr file.
 
 `orient` : [Model Orientation](#model-orientation). Defines the Right, Up, Forward, and Over direction vectors.
 
-`pl` : [Polyline](#polylines). Defines a list of vertex indices where line segments connect consecutive vertices.
+`p` : [Polyhedron](#polyhedron). Defines a list of oriented faces that make up the surface of the polyhedron.
 
-`plformat` : [Polyline Format](#polyline-format-customization). Allows you to customize per-vertex and per-polyline data.
+`pl` : [Polyline](#polylines). Defines a list of vertex indices where line segments connect consecutive vertices.
 
 `t` : [Tetrahedron](#tetrahedron). Defines a list of vertex data to assign to each of the four vertices.
 
@@ -541,9 +547,13 @@ t 5 6 7 8
 
 `v` : [Vertex Position](#vertex-position). Four floating point numbers to define the x, y, z, w coordinates of the position.
 
+`vc` : [Vertex Color](#color-data). Either RGB or RGBA 8-bit uint per component.
+
 `vn` : [Vertex Normal](#vertex-normal). Four floating point numbers to define the x, y, z, w coordinates of the normal vector.
 
 `vt` : [Vertex Texture Coordinate](#vertex-texture-coordinate). Three floating point numbers to define the u, v, w coordinates of the texture map vertex.
+
+`vtxformat` : [Vertex Format](#vertex-format-customization). Allows you to customize per-vertex data.
 
 ## Material Commands
 
