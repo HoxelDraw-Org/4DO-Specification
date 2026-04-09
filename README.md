@@ -5,7 +5,7 @@ The official specification for the 4DO Geometry File Format
 April 8, 2026
 
 ## Background
-In recent years, four-dimensional software and video games have seen a steady rise in popularity and interest. Games like Miegakure, 4D Miner, 4D Golf, and 4D Toys all have growing fan bases and some have seen viral success with their devlogs and status updates. Other software such as Stella4D, Polychora, and HoxelDraw are geared toward 4D content creation and visualization. So far, there seems to be little or no collaboration or coordination between any 4D software. As of April 2024, there is no consensus on a standard file format for 4D geometric objects. Some software (at least Stella4D and Polychora) have used a modified version of the .OFF file format, originally designed for 3D polytopes. However, the extensions to 4D seem out-of-place within the file format. Additionally, the geometric structure of the .OFF format (arbitrary cells composed of arbitrary polygons) requires too much post-processing to transform the data into a tetrahedral mesh. Other software uses either a proprietary format, or opts to generate geometric models on-the-fly.
+In recent years, four-dimensional software and video games have seen a steady rise in popularity and interest. Games like Miegakure, 4D Miner, 4D Golf, and 4D Toys all have growing fan bases and some have seen viral success with their devlogs and status updates. Other software such as Stella4D, Polychora, and HoxelDraw are geared toward 4D content creation and visualization. So far, there seems to be little or no collaboration or coordination between any 4D software. As of April 2024, there is no consensus on a standard file format for 4D geometric objects. Some software (at least Stella4D and Polychora) have used a modified version of the .OFF file format, originally designed for 3D polytopes. However, the extensions to 4D seem out-of-place within the file format. Other software uses either a proprietary format, or opts to generate geometric models on-the-fly.
 
 I propose a new 4D geometry file format that is designed specifically for 4D computer graphics applications.
 
@@ -151,7 +151,7 @@ If an Orientation is provided, it **MUST** be listed only once and before any Ve
 
 Model Orientation is defined using the `orient` command, followed by a space-separated list of signed axes that correspond to the Right, Up, Forward, and Over directions. Each of the X, Y, Z, and W axes **MUST** be included exactly once.
 
-The Orientation should be used to orient only Vertex Position and Vertex Normal, but should not affect Vertex Texture Coordinate.
+The Orientation **SHOULD** be used to orient only Vertex Position and Vertex Normal, but **SHOULD NOT** affect Vertex Texture Coordinate.
 
 #### Examples
 ```
@@ -268,7 +268,7 @@ t 4 5 6 7
 ```
 
 ### Tetrahedron Vertex Winding Order
-The winding order of the vertices in a Tetrahedron helps to determine the direction of the surcell normal. While the order is not enforced by this specification, the following convention is recommended. With vertex 0 at the apex of the tetrahedron, the three vertices of the base of the tetrahedron should be listed in clockwise (CW) order, when viewed from the outside of the tetrahedron. The vertex order is illustrated here:
+The winding order of the vertices in a Tetrahedron helps to determine the direction of the surcell normal. While the order is not enforced by this specification, the following convention is recommended. With vertex 0 at the apex of the tetrahedron, the three vertices of the base of the tetrahedron **SHOULD** be listed in clockwise (CW) order, when viewed from the outside of the tetrahedron. The vertex order is illustrated here:
 ![Tetrahedron vertex winding order](4DO_spec_diagrams/tet_winding_order.png)
 
 ## Cuboid
@@ -328,7 +328,7 @@ While not strictly required, a single Face **MAY** be referenced by two distinct
 #### Examples
 ```
 # a pair of pyramids that share a quadrilateral base
-<vertex data>
+# vertex data goes here
 f 3 2 1 0    # shared quadrilateral base
 f 0 1 4
 f 1 2 4
@@ -395,7 +395,7 @@ While winding order is not and cannot be enforced by this format, it is benefici
 In 3D, the right-hand rule dictates that a CCW ordering of vertices will produce a normal in the desired direction.
 
 In 4D, there is no equivalent right-hand rule. However, when one vertex of a tetrahedron is selected as the origin of some basis, the other three vertices can be ordered CW or CCW relative to the origin point. Calculating the 4D normal vector of a tetrahedron is accomplished by taking the determinant of a matrix formed by the three edges that touch the origin vertex. Assuming the rows of the matrix are from edges 0, 1, and 2 in order, a CW ordering, *not* CCW, is needed to produce a normal vector pointing "out" from the tetrahedron.
-If this flipped convention is confusing, you may want to adopt the convention proposed by [Chu et al.], i.e. the ordering is CCW when viewed from *inside the tetrahedron.*
+If this flipped convention is confusing, you may want to visualize it in the way proposed by [Chu et al.], i.e. the ordering is CCW when viewed from *inside the tetrahedron.*
 
 [Chu et al.] Chu, A., Fu, C. W., Hanson, A., & Heng, P. A. (2009). GL4D: A GPU-based architecture for interactive 4D visualization. IEEE transactions on visualization and computer graphics, 15(6), 1587-1594.
 
