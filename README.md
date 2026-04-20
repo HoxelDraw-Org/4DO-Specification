@@ -483,11 +483,11 @@ emissiveTexture "prettyLights.png"
 ```
 
 #### Emissive Factor
-The Emissive Factor is **OPTIONAL** and uses the `emissiveFactor` keyword, followed by three floating-point values in the [0,1] range representing the RGB components of emission. If both a factor and a texture are provided, the factor acts as a component-wise scaling factor for the texture. If only a factor is provided, the factor is treated as the emissive color.
+The Emissive Factor is **OPTIONAL** and uses the `emissiveFactor` keyword, followed by three non-negative floating-point values representing the RGB components of emission. The components of the factor can have values greater than 1. If both a factor and a texture are provided, the factor acts as a component-wise scaling factor for the texture. If only a factor is provided, the factor is treated as the emissive color.
 
 #### Example
 ```
-emissiveFactor 0.4 0.6 0.8
+emissiveFactor 0.4 0.6 1.8
 ```
 
 ## Using Materials
@@ -561,7 +561,7 @@ t 5 6 7 8
 
 `baseColorTexture` : The [Base Color](#base-color) of the material, encoded in a 3D texture.
 
-`emissiveFactor` : The [Emissive Color](#emissive-factor) of the material. Encoded as four floating point numbers. If an `emissiveTexture` is present, the `emissiveFactor` is a component-wise scaling factor for the texture.
+`emissiveFactor` : The [Emissive Color](#emissive-factor) of the material. Encoded as three floating point numbers. If an `emissiveTexture` is present, the `emissiveFactor` is a component-wise scaling factor for the texture.
 
 `emissiveTexture` : The [Emissive Color](#emissive-texture) of the material, encoded in a 3D texture.
 
